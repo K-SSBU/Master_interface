@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <title>PrefTolerance</title>
+    <meta charset="utf-8">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"> 
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="css/map_style.css" rel="stylesheet">
+  </head>
+  <body>
+    <!-- ページ展開時のローディング -->
+    <div id="loading" class="loading">
+      <div class="circle"></div>
+    </div>
+
+    <div id="content-area">
+      <!-- 許容度マップ表示エリア -->
+      <div id="map-area">    
+        <!-- ボーカルマップ -->
+        <div class="map">
+          <div class="later-info">
+            <div class="map-type-text">VOCAL</div>
+            <div class="sigma-area">
+              <input type="range" id="slider1" min="1" max="500" step="1" value="50"> 
+            </div>
+          </div>
+          <div class="map-container">
+            <canvas id="vocal-scatter" class="scatter"></canvas>
+          </div>
+        </div>
+
+        <!-- インストマップ -->
+        <div class="map inst-map">
+          <div class="later-info">
+            <div class="ACCOMPANIMENT-map-text">ACCOMPANIMENT</div>
+            <div class="sigma-area">
+              <input type="range" id="slider2" min="1" max="500" step="1" value="50">
+            </div>
+          </div>
+          <div class="map-container">
+            <canvas id="inst-scatter" class="scatter"></canvas>
+          </div>
+        </div>
+
+        <!-- 歌詞マップ -->
+        <div class="map lyric-map">
+          <div class="later-info">
+            <div class="map-type-text">LYRICS</div>                        
+            <div class="sigma-area">
+              <input type="range" id="slider3" min="1" max="500" step="1" value="50">
+            </div>
+          </div>
+          <div class="map-container">
+            <canvas id="lyric-scatter" class="scatter"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div id="other-area">
+        <div id="video-evaluation-area">
+          <!-- ニコニコプレイヤー表示エリア -->
+          <div id="player"></div>
+
+          <!-- 評価エリア -->
+          <div id="evaluation-area">
+            <div id="evaluation-text-area">
+              <div id="evaluation-text">EVALUATION</div>
+            </div>
+
+            <!-- VOCALの評価 -->
+            <div id="vocal-evaluation">
+              <div class="evaluation-type-text">VOCAL</div>
+              <div class="evaluation-content">
+                <div class="rating-button" data-value="-1.0">
+                  <i class="material-icons select-icon very-dissatisfied">sentiment_very_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="-0.5">
+                  <i class="material-icons select-icon dissatisfied">sentiment_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="0.0">
+                  <i class="material-icons select-icon neutral">sentiment_neutral</i>
+                </div>
+                <div class="rating-button" data-value="0.5">
+                  <i class="material-icons select-icon satisfied">sentiment_satisfied</i>
+                </div>
+                <div class="rating-button" data-value="1.0">
+                  <i class="material-icons select-icon very-satisfied">sentiment_very_satisfied</i>
+                </div>
+              </div>
+            </div>
+
+            <!-- INSTの評価 -->
+            <div id="inst-evaluation">
+              <div class="evaluation-ACCOMPANIMENT-text">ACCOMPANIMENT</div>
+              <div class="evaluation-content">
+                <div class="rating-button" data-value="-1.0">
+                  <i class="material-icons select-icon very-dissatisfied">sentiment_very_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="-0.5">
+                  <i class="material-icons select-icon dissatisfied">sentiment_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="0.0">
+                  <i class="material-icons select-icon neutral">sentiment_neutral</i>
+                </div>
+                <div class="rating-button" data-value="0.5">
+                  <i class="material-icons select-icon satisfied">sentiment_satisfied</i>
+                </div>
+                <div class="rating-button" data-value="1.0">
+                  <i class="material-icons select-icon very-satisfied">sentiment_very_satisfied</i>
+                </div>
+              </div>
+            </div>
+
+            <!-- LYRICの評価 -->
+            <div id="lyric-evaluation">
+              <div class="evaluation-type-text">LYRICS</div>
+              <div class="evaluation-content">
+                <div class="rating-button" data-value="-1.0">
+                  <i class="material-icons select-icon very-dissatisfied">sentiment_very_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="-0.5">
+                  <i class="material-icons select-icon dissatisfied">sentiment_dissatisfied</i>
+                </div>
+                <div class="rating-button" data-value="0.0">
+                  <i class="material-icons select-icon neutral">sentiment_neutral</i>
+                </div>
+                <div class="rating-button" data-value="0.5">
+                  <i class="material-icons select-icon satisfied">sentiment_satisfied</i>
+                </div>
+                <div class="rating-button" data-value="1.0">
+                  <i class="material-icons select-icon very-satisfied">sentiment_very_satisfied</i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 楽曲選択エリア -->
+        <div id="playlist-area">
+          <div class="first-song-area">
+            <div class="song-info"><!-- ここに初期曲を描画 --></div>
+            <div class="next-song-button">
+              <div class="next-song-text">NEXT SONG</div>
+            </div>
+          </div>
+          
+          <!-- 探索・推薦タブ -->
+          <div class="exp-rec-area" style="display: none;">
+            <div class="playlist-type-area">
+              <div class="playlist-type-text select-type" id="explore-playlist">EXPLORE</div>
+              <div class="playlist-type-text non-select-type" id="recommend-playlist">RECOMMEND</div>
+            </div>
+            <!-- 各プレイリスト表示 -->
+            <div id="song-content-area">
+              <div id="exp-song-content"></div>
+              <div id="rec-song-content" style="display: none;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ライブラリ -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@1.2.0/dist/chartjs-chart-matrix.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-scale-chromatic@3.1.0/dist/d3-scale-chromatic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- 1) クエリから first_songId / mapType を決定 -->
+    <script>
+      (function () {
+        const p = new URLSearchParams(location.search);
+        // index 側から ?song_id=...&map_type=umap で来る想定
+        window.first_songId = p.get('song_id') || null;
+        window.mapType = p.get('map_type') || 'umap';
+        window.toleranceSetting = p.get('toleranceSetting') || 'Each';
+        window.concatType = p.get('concatType') || 'AllPattern';
+      })();
+    </script>
+
+    <!-- 2) JSON を先に読み込み → 3) 読み終えてから map_app.js をロード -->
+    <script>
+      (function () {
+        const JSON_URL = 'data/all_song_data.json'; // 置き場所に合わせて調整
+
+        $.getJSON(JSON_URL, { _: Date.now() }).done(function (json) {
+          // グローバルへ置く（map_app.js が参照）
+          window.songData = json;
+
+          // first_songId が未指定 or 無効ならフォールバック（先頭）
+          if (!window.first_songId || !songData[window.first_songId]) {
+            const ids = Object.keys(songData);
+            window.first_songId = ids[0] || null;
+          }
+
+          // 4) 先に“楽曲選択エリア”へ反映（.first-song-area .song-info がある前提）
+          const slot = document.querySelector('.first-song-area .song-info');
+          if (slot && window.first_songId) {
+            const s = songData[window.first_songId];
+            const esc = (t) => String(t ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+            slot.innerHTML = `
+              <div class="annotation-text">SELECTED SONG</div>
+              <div class="song-main">
+                <div class="song-icon"><img src="${esc(s.thumbnail)}" alt=""></div>
+                <div class="song-text">
+                  <div class="song-title song-title-highlight">${esc(s.title)}
+                    <div class="song-writer">${esc(s.writer)}</div>
+                  </div>
+                </div>
+              </div>`;
+          }
+
+          // ▼ JSON が揃ってから map_app.js を読み込む（ここが重要）
+          $.getScript('js/map_app.js').fail(function (_jq, _s, err) {
+            console.error('map_app.js の読み込みに失敗:', err);
+            alert('map_app.js のパスを確認してください。');
+          });
+        }).fail(function () {
+          alert('all_song_data.json の読み込みに失敗しました。配置パスを確認してください。');
+        });
+      })();
+    </script>
+  </body>
+</html>
