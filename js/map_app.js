@@ -137,7 +137,7 @@ $(document).ready(function () {
         $('#recommend-playlist').addClass('non-select-type');
 
         if (exp_song_id) {
-            display_song(exp_song_id);
+            display_song(exp_song_id, 'explore');
         }
     });
 
@@ -166,7 +166,7 @@ $(document).ready(function () {
 
         listenSongID = $(this).data('songid');
         if (listenSongID) {
-            display_song(listenSongID);
+            display_song(listenSongID, 'recommend');
         }
     });
 
@@ -178,7 +178,7 @@ $(document).ready(function () {
             exp_song_id = explore_song();
             top5_songs = recommend_songs();
             render_exp_song(exp_song_id);
-            display_song(exp_song_id);
+            display_song(exp_song_id, 'explore');
         } else {
             alert("EXPLORE 楽曲を評価してください");
         }
@@ -196,7 +196,7 @@ $(document).ready(function () {
 
             render_exp_song(exp_song_id); // 探索楽曲を表示
             $('.exp-rec-area').css('display', 'block'); //探索・推薦タブを表示
-            display_song(exp_song_id); // プレイヤー・評価ボタンの更新 + 表示中の楽曲タイトルを緑色に変更
+            display_song(exp_song_id, 'explore'); // プレイヤー・評価ボタンの更新 + 表示中の楽曲タイトルを緑色に変更
 
             $('#explore-playlist').trigger('click');
             // console.log(listenSongID);
@@ -372,12 +372,14 @@ $(document).ready(function () {
                 finalizeCurrentSongRatings(listenSongID);
             }
 
-            display_song(targetSongId);
+            display_song(targetSongId, 'recommend');
         }
     }
 
     // 楽曲の動画を表示
-    function display_song(SongId) {
+    function display_song(SongId, songType) {
+        if (songType) songData[SongId].song_type = songType;
+
         // 評価値をその曲に応じて復元
         const song = songData[SongId];
         desiredMaxLyric = song.lyric_rating ?? null;
@@ -441,7 +443,9 @@ $(document).ready(function () {
         if (inst_scatterData[songId]) inst_scatterData[songId].listen_flag = true;
         if (lyric_scatterData[songId]) lyric_scatterData[songId].listen_flag = true;
 
-        console.log("評価した楽曲数：" + Object.values(songData).filter(s => s.listen_flag === true).length);
+        upsertEvaluatedSong(songId);
+
+        // console.log("評価した楽曲数：" + Object.values(songData).filter(s => s.listen_flag === true).length);
     }
 
     // 散布図データ作成
@@ -501,8 +505,8 @@ $(document).ready(function () {
                                 const dataPoint = tooltipItem.raw;
                                 return [
                                     `${dataPoint.title}`,
-                                    `${dataPoint.writer}`,
-                                    `Z = ${dataPoint.Z_value.toFixed(4)}`
+                                    `${dataPoint.writer}`
+                                    // `Z = ${dataPoint.Z_value.toFixed(4)}`
                                 ];
                             }
                         },
@@ -549,7 +553,7 @@ $(document).ready(function () {
                         $('.first-song-area').show();
                         $('.exp-rec-area').hide();
                         updateFirstSongArea(clickedSongId);
-                        display_song(clickedSongId);
+                        display_song(clickedSongId, 'map');
                     }
                 }
             }
@@ -612,6 +616,8 @@ $(document).ready(function () {
 
     // IDW計算関数
     function idwBlendValues(x, y, pts, power = 2.0, eps = 1e-12) {
+        // x, y:未評価楽曲の座標
+        // pts:評価済みの楽曲
         // if (!pts || pts.length === 0) return 0.0;
 
         let wSum = 0.0;
@@ -636,40 +642,19 @@ $(document).ready(function () {
     // function gkrEstimate(x, y, centers, sigma, eps = 1e-12) {
     //     if (!centers || centers.length === 0) return 0.0;
 
-    //     const s = Number(sigma);
-
     //     let num = 0.0; // Σ K * y
     //     let den = 0.0; // Σ K
 
     //     for (const c of centers) {
     //         const dx = x - c.x;
     //         const dy = y - c.y;
-    //         const k  = Math.exp(-0.5 * ((dx*dx + dy*dy) / (s*s)));
+    //         const k  = Math.exp(-0.5 * ((dx*dx + dy*dy) / (sigma*sigma)));
 
-    //         num += k * c.rating;
+    //         num += k * c.value;
     //         den += k;
     //     }
     //     return (den > eps) ? (num / den) : 0.0;
     // }
-
-    // カウントデバッグ用関数
-    function logZwithCounts(category, limit = 10) {
-        // limit：コンソールで表示する楽曲数（未評価で再生数が上位順）
-        const sd = (category === 'vocal') ? vocal_scatterData
-            : (category === 'inst') ? inst_scatterData
-                : lyric_scatterData;
-        const rows = Object.values(sd)
-            .filter(p => p.listen_flag === false) // 未評価だけ表示
-            .slice(0, limit)
-            .map(p => ({
-                songid: p.songid,
-                title: p.title,
-                Z: p.Z_value,
-                p03count: p.p03count ?? 0,
-                n03count: p.n03count ?? 0
-            }));
-        console.table(rows);
-    }
 
     // 要素ごとの各楽曲にガウス分布を付与する関数（各楽曲で同じ許容度設定）
     function AllGiveZ_value(category) {
@@ -691,14 +676,14 @@ $(document).ready(function () {
                 songData[c.songid][`${category}_rating`] != null
             );
 
-            const contribTh = 0.01; // 「-0.01以下 or 0.01以上」→ abs>=0.01
+            const contribTh = 0.0; // 閾値を0（0以外の評価の時を対象）
             const power = 2.0;
 
             // 未評価楽曲に対してのループ
             Object.values(sd).forEach(p => {
                 if (p.listen_flag === true) return; // 評価済み曲の評価値は固定
 
-                // この点pに対し |contrib|>=0.01 の評価済み曲だけ集める
+                // この点pに対し |contrib|>=0 の評価済み曲だけ集める
                 const contributors = [];
 
                 for (const center of centersAll) {
@@ -710,7 +695,7 @@ $(document).ready(function () {
                     const contrib = calculateZ(p.x, p.y, mu_x, mu_y, sigma, desiredMax, coef);
 
                     // 閾値に該当する評価済み楽曲リストを作成
-                    if (Math.abs(contrib) >= contribTh) {
+                    if (Math.abs(contrib) > contribTh) {
                         contributors.push({ x: mu_x, y: mu_y, value: contrib });
                     }
                 }
@@ -821,6 +806,241 @@ $(document).ready(function () {
         );
         chart.update();
     }
+
+    // ====== 1) 各マップの右上に「拡大」ボタンを差し込む ======
+    (function injectExpandButtons() {
+        // .map 直下の canvas を拾って、そのマップの later-info 内の右側にボタンを置く
+        $('.map').each(function () {
+            const $map = $(this);
+            const canvasId = $map.find('canvas.scatter').attr('id');
+            if (!canvasId) return;
+            const $sigmaArea = $map.find('.later-info .sigma-area');
+            const btnHtml = `
+            <button class="expand-canvas" data-target="${canvasId}" aria-label="拡大">
+                <span class="material-icons">open_in_full</span>
+            </button>`;
+            // スライダの左に置く
+            $sigmaArea.prepend(btnHtml);
+        });
+    })();
+
+    // ====== 2) オーバーレイ内部状態 ======
+    let overlayState = { canvas: null, parent: null, placeholder: null, chart: null, sliderOrig: null, sliderSync: null };
+
+
+    function findChartByCanvas(canvasEl) {
+        if (Chart.getChart) return Chart.getChart(canvasEl);
+        // フォールバック（手元参照から捜索）
+        const list = [myChartVocal, myChartInst, myChartLyric].filter(Boolean);
+        return list.find(c => c.canvas === canvasEl) || null;
+    }
+
+    // ====== 3) オープン / クローズ ======
+    function openCanvasOverlay(canvasId, titleText) {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return;
+
+        if (overlayState.canvas) closeCanvasOverlay();
+
+        // ★先に「元のmap」と「元スライダ」を取る（canvasを移動する前！）
+        const mapRoot = canvas.closest('.map');
+        const sliderOrig = mapRoot?.querySelector('.later-info input[type="range"]') ?? null;
+
+        const placeholder = document.createElement('div');
+        placeholder.className = 'canvas-placeholder';
+        const parent = canvas.parentNode;
+        parent.insertBefore(placeholder, canvas);
+
+        // （ここでcanvasを移動）
+        document.querySelector('#canvas-overlay .canvas-host').appendChild(canvas);
+
+        // タイトル更新（既存）
+        const titleEl = document.querySelector('#canvas-overlay .overlay-title');
+        const base = canvasId.replace(/-scatter$/, '').toUpperCase();
+        const pretty = ({ INST: 'ACCOMPANIMENT', LYRIC: 'LYRICS' }[base] ?? base);
+        titleEl.textContent = titleText ?? pretty;
+
+        // ★スライダをオーバーレイに表示（クローンして同期）
+        const controlsHost = document.querySelector('#canvas-overlay .overlay-controls');
+        controlsHost.innerHTML = '';
+
+        let sliderSync = null;
+        if (sliderOrig) {
+            const sliderClone = sliderOrig.cloneNode(true);
+            sliderClone.removeAttribute('id');
+            sliderClone.value = sliderOrig.value;
+
+            sliderClone.addEventListener('input', () => {
+                sliderOrig.value = sliderClone.value;
+                sliderOrig.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+
+            sliderSync = () => { sliderClone.value = sliderOrig.value; };
+            sliderOrig.addEventListener('input', sliderSync);
+
+            controlsHost.appendChild(sliderClone);
+        }
+
+        // …（以下はそのまま）
+        const chart = findChartByCanvas(canvas);
+        $('#canvas-overlay').addClass('open');
+        document.body.classList.add('no-scroll');
+        if (chart) chart.resize();
+
+        overlayState = { canvas, parent, placeholder, chart, sliderOrig, sliderSync };
+    }
+
+    function closeCanvasOverlay() {
+        const { canvas, parent, placeholder, chart, sliderOrig, sliderSync } = overlayState;
+        if (!canvas) return;
+
+        // ★同期解除＆スライダ表示を消す
+        if (sliderOrig && sliderSync) sliderOrig.removeEventListener('input', sliderSync);
+        const controlsHost = document.querySelector('#canvas-overlay .overlay-controls');
+        if (controlsHost) controlsHost.innerHTML = '';
+
+        parent.insertBefore(canvas, placeholder);
+        placeholder.remove();
+
+        $('#canvas-overlay').removeClass('open');
+        document.body.classList.remove('no-scroll');
+        if (chart) chart.resize();
+
+        overlayState = { canvas: null, parent: null, placeholder: null, chart: null, sliderOrig: null, sliderSync: null };
+    }
+
+    // 背景クリック/×/Escでクローズ
+    $(document).on('click', '.overlay-close', closeCanvasOverlay);
+    $('#canvas-overlay').on('click', function (e) {
+        if (e.target.id === 'canvas-overlay') closeCanvasOverlay();
+    });
+    $(document).on('keydown', function (e) {
+        if ($('#canvas-overlay').hasClass('open') && e.key === 'Escape') closeCanvasOverlay();
+    });
+
+    // ====== 4) ボタンクリックで拡大 ======
+    $(document).on('click', '.expand-canvas', function () {
+        const id = $(this).data('target');
+        // data-title を付けたい場合は $(this).data('title') を渡す
+        openCanvasOverlay(id);
+    });
+
+    // CSV出力関係
+    // 評価した曲の情報を保存 
+    function upsertEvaluatedSong(songId) {
+        if (!songId) return;
+
+        // 初回だけ order を付与（同じ曲を再度確定したら上書き）
+        const prev = evaluatedSongMap[songId];
+        const order = prev?.order ?? evaluationOrder++;
+
+        evaluatedSongMap[songId] = {
+            order,
+            songid: songId,
+            song_type: songData[songId]?.song_type ?? "",
+            vocal_rating: songData[songId]?.vocal_rating ?? null,
+            inst_rating: songData[songId]?.inst_rating ?? null,
+            lyric_rating: songData[songId]?.lyric_rating ?? null,
+            vocal_sigma: vocal_sigma,
+            inst_sigma: inst_sigma,
+            lyric_sigma: lyric_sigma,
+        };
+    }
+
+    // CSV出力
+    function exportEvaluatedSongsToCSV() {
+        // ---- 左ブロック：曲ごとのログ ----
+        const leftHeader = [
+            "", "songid", "song_type",
+            "vocal_sigma", "accompaniment_sigma", "lyrics_sigma",
+            "vocal_rating", "accompaniment_rating", "lyrics_rating"
+        ];
+
+        const leftRows = Object.values(evaluatedSongMap)
+            .sort((a, b) => a.order - b.order)
+            .map(song => [
+                song.order,
+                song.songid,
+                song.song_type ?? "",
+                ((song.vocal_sigma ?? 0) / 1000),
+                ((song.inst_sigma ?? 0) / 1000),
+                ((song.lyric_sigma ?? 0) / 1000),
+                song.vocal_rating ?? "",
+                song.inst_rating ?? "",
+                song.lyric_rating ?? ""
+            ]);
+
+        // ---- 右ブロック：評価値ごとの合計数 ----
+        const levels = [-1, -0.5, 0, 0.5, 1];
+        const counts = {
+            vocal: Object.fromEntries(levels.map(v => [v, 0])),
+            inst: Object.fromEntries(levels.map(v => [v, 0])),
+            lyric: Object.fromEntries(levels.map(v => [v, 0])),
+        };
+
+        const addCount = (bucket, r) => {
+            if (r === "" || r == null) return; // 空欄は除外
+            const v = Number(r);
+            if (Number.isFinite(v) && v in bucket) bucket[v]++;
+        };
+
+        for (const s of Object.values(evaluatedSongMap)) {
+            addCount(counts.vocal, s.vocal_rating);
+            addCount(counts.inst, s.inst_rating);
+            addCount(counts.lyric, s.lyric_rating);
+        }
+
+        const rightHeader = ["rating_count", "vocal", "accompaniment", "lyrics"];
+        const rightRows = levels.map(v => [
+            v,
+            counts.vocal[v],
+            counts.inst[v],
+            counts.lyric[v]
+        ]);
+
+        // ---- 2ブロックを横結合 ----
+        const gap = ["", "", ""];
+        const totalRows = Math.max(1 + leftRows.length, 1 + rightRows.length);
+
+        const padLeft = (row) => {
+            const a = row ?? [];
+            const out = a.slice();
+            while (out.length < leftHeader.length) out.push("");
+            return out;
+        };
+        const padRight = (row) => {
+            const a = row ?? [];
+            const out = a.slice();
+            while (out.length < rightHeader.length) out.push("");
+            return out;
+        };
+
+        const grid = [];
+        for (let i = 0; i < totalRows; i++) {
+            const L = (i === 0) ? leftHeader : leftRows[i - 1];
+            const R = (i === 0) ? rightHeader : rightRows[i - 1];
+            grid.push([...padLeft(L), ...gap, ...padRight(R)]);
+        }
+
+        const csvContent = grid.map(r => r.join(",")).join("\n");
+
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "evaluated_user.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // EnterキーでCSV出力
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+            upsertEvaluatedSong(listenSongID);
+            exportEvaluatedSongsToCSV();
+        }
+    });
 
     $('#loading').fadeOut();
 

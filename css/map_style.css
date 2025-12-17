@@ -292,7 +292,7 @@ canvas {
 
 .rating-button {
     width: 17.5%;
-    height: 82%;
+    height: 79.5%;
     border-radius: 50%; /* アイコン選択時の円の大きさ */
     display: flex;
     align-items: center;
@@ -588,3 +588,71 @@ canvas {
   0%{-webkit-transform:rotate(0deg)}
   100%{-webkit-transform:rotate(360deg)}
 }
+
+/* === canvas拡大オーバーレイ === */
+#canvas-overlay{
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,.72);
+  display: none; align-items: center; justify-content: center;
+}
+#canvas-overlay.open{ display: flex; }
+#canvas-overlay .overlay-content{
+  width: min(96vw, 1400px);
+  height: 90vh;
+  background: white; color:black;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  display: flex; flex-direction: column; padding: 12px;
+}
+
+#canvas-overlay .overlay-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+}
+
+#canvas-overlay .overlay-controls{
+  margin-left: auto;          /* タイトルの右側に寄せる */
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+#canvas-overlay .overlay-controls input[type="range"]{
+  width: 200px;               /* 好みで */
+}
+
+#canvas-overlay .overlay-title.map-type-text{
+  width: fit-content;          /* 30%固定を解除 */
+  padding: 0px 12px;           /* それっぽい余白 */
+  border-radius: 5px 5px 0 0;  /* map-type-textと同じ */
+  font-size: 18pt;             /* map-type-textと同じ */
+  font-weight: bold;           /* map-type-textと同じ */
+  background-color: rgba(0,0,0,0.1); /* map-type-textと同じ */
+}
+#canvas-overlay .overlay-close{
+  font-size: 25px; line-height: 1; background:transparent; color:black; border:0; cursor:pointer; margin-left: 40px;
+}
+#canvas-overlay .canvas-host{ flex:1 1 auto; min-height:0; }
+#canvas-overlay .canvas-host canvas{ width:100% !important; height:100% !important; }
+body.no-scroll{ overflow:hidden; }
+
+/* === 「拡大」ボタン（later-infoの右側に出す） === */
+.expand-canvas{
+  display:flex; align-items:center; justify-content:center;
+  width: 28px; height: 28px; margin-right: 10px; margin-bottom: 3.5px;
+  border-radius: 8px; border: 1px solid rgba(0,0,0,.15);
+  background: rgba(0,0,0,.08);
+  cursor: pointer; transition: background .2s, transform .06s;
+}
+.expand-canvas:hover{ background: rgba(0,0,0,.14); }
+.expand-canvas:active{ transform: scale(.98); }
+.expand-canvas .material-icons{ font-size: 20px; color:#222; }
+
+/* later-infoの行に収まるように */
+.later-info { gap: 8px; }
+
+/* 無効スライダの見た目（あなたの既存ロジック用：任意） */
+.is-disabled { opacity: .5; pointer-events: none; }

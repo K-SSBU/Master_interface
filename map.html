@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ja">
   <head>
-    <title>PrefTolerance</title>
+    <title>Master_interface</title>
     <meta charset="utf-8">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -160,6 +160,17 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div id="canvas-overlay" aria-hidden="true">
+      <div class="overlay-content" role="dialog" aria-modal="true">
+        <div class="overlay-header">
+          <div class="overlay-title map-type-text"></div>
+          <div class="overlay-controls"></div>
+          <button type="button" class="overlay-close" aria-label="閉じる">×</button>
+        </div>
+        <div class="canvas-host"><!-- ←ここに対象canvasがオーバーレイ --></div>
       </div>
     </div>
 
