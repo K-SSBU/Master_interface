@@ -947,6 +947,28 @@ $(document).ready(function () {
         };
     }
 
+    // 最後の推薦候補の楽曲リスト
+    function getRecommendSongsForCSV(n = 50) {
+        const allSongIDs = Object.keys(vocal_scatterData);
+
+        const list = allSongIDs
+            .filter(songID => vocal_scatterData[songID]?.listen_flag === false) // 未評価のみ
+            .map(songID => {
+                const vocalZ = Number(vocal_scatterData[songID]?.Z_value ?? 0);
+                const instZ = Number(inst_scatterData[songID]?.Z_value ?? 0);
+                const lyricZ = Number(lyric_scatterData[songID]?.Z_value ?? 0);
+                return {
+                    songid: songID,
+                    title: vocal_scatterData[songID]?.title ?? "",
+                    total_Z_value: (vocalZ + instZ + lyricZ) / 3
+                };
+            })
+            .sort((a, b) => b.total_Z_value - a.total_Z_value)
+            .slice(0, n);
+
+        return list;
+    }
+
     // CSV出力
     function exportEvaluatedSongsToCSV() {
         // ---- 左ブロック：曲ごとのログ ----
@@ -1022,9 +1044,19 @@ $(document).ready(function () {
             grid.push([...padLeft(L), ...gap, ...padRight(R)]);
         }
 
+        const recTop15 = getRecommendSongsForCSV(50);
+        grid.push([]); // 空行
+        grid.push(["recommend_top50"]); // 見出し行（任意）
+        grid.push(["rank", "songid", "title", "total_Z_value"]);
+
+        recTop15.forEach((s, i) => {
+        grid.push([i + 1, s.songid, s.title, s.total_Z_value]);
+        });
+
         const csvContent = grid.map(r => r.join(",")).join("\n");
 
-        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const bom = "\uFEFF";
+        const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
