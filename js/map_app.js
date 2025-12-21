@@ -173,6 +173,11 @@ $(document).ready(function () {
     // exp-song-content 内に動的に挿入された NEXT SONG ボタンをクリックしたときの処理
     $(document).on('click', '#exp-song-content .next-song-button', function () {
         if (songData[listenSongID]?.listen_flag === true) {
+            if (!hasAnyListenedInTopSongs(top5_songs)) {
+                alert("RECOMMEND タブの楽曲を1曲以上評価してください");
+                return;
+            }
+
             finalizeCurrentSongRatings(listenSongID);
 
             exp_song_id = explore_song();
@@ -376,6 +381,13 @@ $(document).ready(function () {
         }
     }
 
+    function hasAnyListenedInTopSongs(topSongs) {
+        // 推薦がまだ生成されていない/空のときは「チェック対象なし」扱いで通す（必要なら false に変えてください）
+        if (!Array.isArray(topSongs) || topSongs.length === 0) return true;
+
+        return topSongs.some(s => songData?.[s.songid]?.listen_flag === true);
+    }
+
     // 楽曲の動画を表示
     function display_song(SongId, songType) {
         if (songType) songData[SongId].song_type = songType;
@@ -523,6 +535,11 @@ $(document).ready(function () {
                         return
                     };
 
+                    if (!hasAnyListenedInTopSongs(top5_songs)) {
+                        alert("RECOMMEND タブの楽曲を1曲以上評価してください");
+                        return;
+                    }
+
                     if (elements.length > 0) {
                         const chart = elements[0].element.$context.chart;
                         const dataIndex = elements[0].index;
@@ -590,7 +607,7 @@ $(document).ready(function () {
 
         // songle 読み込み
         $('#player').html(`
-            <div data-api="songle-widget-extra-module" data-url="${url}" id="songle-widget" data-songle-widget-ctrl="0" data-api-chorus-auto-reload="1" data-song-start-at="chorus"
+            <div data-api="songle-widget-extra-module" data-url="${url}" id="songle-widget" data-songle-widget-ctrl="0" data-api-chorus-auto-reload="1" data-song-start-at="0"
             data-video-player-size-w="${player_weight}" data-video-player-size-h="${video_player_height}" data-songle-widget-size-w="${player_weight}" data-songle-widget-size-h="100"></div>
         `);
         $.getScript("https://widget.songle.jp/v1/widgets.js"); // songle プレイヤーを表示
@@ -1050,7 +1067,7 @@ $(document).ready(function () {
         grid.push(["rank", "songid", "title", "total_Z_value"]);
 
         recTop15.forEach((s, i) => {
-        grid.push([i + 1, s.songid, s.title, s.total_Z_value]);
+            grid.push([i + 1, s.songid, s.title, s.total_Z_value]);
         });
 
         const csvContent = grid.map(r => r.join(",")).join("\n");
