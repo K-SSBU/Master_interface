@@ -546,6 +546,17 @@ $(document).ready(function () {
                         const clickedSong = chart.data.datasets[0].data[dataIndex];
                         const clickedSongId = clickedSong.songid;
 
+                        // マップで選んだ曲を評価後、別の点を押したらアラートして止める
+                        const current = songData?.[listenSongID];
+                        if (
+                            current?.song_type === 'map' &&
+                            current?.listen_flag === true &&
+                            clickedSongId !== listenSongID
+                        ) {
+                            alert("別の点を選ぶ前に NEXT SONG ボタンを押して、RECOMMEND タブの楽曲を1曲以上評価してください");
+                            return;
+                        }
+
                         if (songData[listenSongID].listen_flag === true) {
                             Object.entries(songData).forEach(([key, song]) => {
                                 if (vocal_scatterData[key]) {
@@ -1092,5 +1103,6 @@ $(document).ready(function () {
     });
 
     $('#loading').fadeOut();
+
 
 });
